@@ -1,4 +1,4 @@
-﻿# CLAUDE.md — Jellyfin Notification Plugin
+# CLAUDE.md — Jellyfin Notification Plugin
 
 Guide de référence pour les interventions IA sur ce repository.
 
@@ -90,7 +90,7 @@ Client (notif-client.js)              Affiché immédiatement
 GET /Notification/List  ←── Polling 60s (fallback Outbox)
     │
     ▼
-Panneau cloche 🔔
+Panneau cloche
 ```
 
 ---
@@ -183,7 +183,6 @@ Panneau cloche 🔔
 
 | Fichier | Raison |
 |---------|--------|
-| `Logger.cs` | Code mort — à supprimer, pas à modifier |
 | `build.yaml` | CI/CD template, non utilisé actuellement |
 | `index.html` (Jellyfin) | Modifié dynamiquement par `Plugin.cs` au démarrage |
 

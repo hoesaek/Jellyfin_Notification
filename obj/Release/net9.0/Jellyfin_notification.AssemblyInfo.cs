@@ -15,7 +15,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyDescriptionAttribute(("Système de notifications personnalisées pour Jellyfin — envoi ciblé, push WebSock" +
     "et, cloche native, historique admin."))]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("2.3.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("2.3.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("2.3.0.0+10b71cfdae7bf239e8814022f32b24aed520f304")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jellyfin_notification")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jellyfin_notification")]
 [assembly: System.Reflection.AssemblyVersionAttribute("2.3.0.0")]

@@ -12,3 +12,4 @@ D:\Projet Vs\Windows\C#\JellyFin-Plugin\Jellyfin_notification\obj\Release\net9.0
 D:\Projet Vs\Windows\C#\JellyFin-Plugin\Jellyfin_notification\obj\Release\net9.0\Jellyfin_notification.xml
 D:\Projet Vs\Windows\C#\JellyFin-Plugin\Jellyfin_notification\obj\Release\net9.0\Jellyfin_notification.pdb
 D:\Projet Vs\Windows\C#\JellyFin-Plugin\Jellyfin_notification\obj\Release\net9.0\ref\Jellyfin_notification.dll
+D:\Projet Vs\Windows\C#\JellyFin-Plugin\Jellyfin_notification\obj\Release\net9.0\Jellyfin_notification.sourcelink.json
