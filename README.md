@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="https://raw.githubusercontent.com/jellyfin/jellyfin-ux/master/branding/SVG/icon-transparent.svg" alt="Jellyfin" width="80"/>
 </p>
 
@@ -31,6 +31,25 @@
 | **Admin dashboard** | Send and History pages with filters, sort, statistics |
 | **SQLite persistence** | WAL mode database, configurable auto-purge |
 | **Fallback polling** | If push fails, the client recovers via polling (60s) |
+
+
+## Screenshots
+
+
+### Send Notification
+![Send Notification Page](./pic-1.png)
+
+
+### Notification History
+![Notification History Page](./pic-2.png)
+
+
+### Notification Bell
+![Notification Bell Indicator](./pic-3.png)
+
+
+### Notification Detail
+![Notification Detail View](./pic-4.png)
 
 ---
 
@@ -143,10 +162,7 @@ Bell panel
 ### Example — Send a notification
 
 ```bash
-curl -X POST http://localhost:8096/Notification/Send \
-  -H "Authorization: MediaBrowser Token=\"YOUR_TOKEN\"" \
-  -H "Content-Type: application/json" \
-  -d '{
+curl -X POST http://localhost:8096/Notification/Send   -H "Authorization: MediaBrowser Token="YOUR_TOKEN""   -H "Content-Type: application/json"   -d '{
     "title": "Scheduled maintenance",
     "message": "The server will restart at 11pm.",
     "targetUserId": "All",
