@@ -1,61 +1,61 @@
-﻿# Data
+# Data
 
-Ce dossier contient la couche de persistance SQLite du plugin.
+This folder contains the plugin's SQLite persistence layer.
 
 ---
 
-## Fichiers
+## Files
 
 ### `NotificationDbContext.cs`
 
-Gestionnaire de schéma et factory de connexions SQLite.
+SQLite schema manager and connection factory.
 
-**Responsabilités :**
-- Créer la base de données et la table `Notifications` au premier lancement
-- Activer le mode WAL (Write-Ahead Logging) pour les performances en lecture concurrente
-- Fournir des connexions SQLite via `CreateConnection()`
-- Construire la connection string de manière sécurisée via `SqliteConnectionStringBuilder`
+**Responsibilities:**
+- Create the database and `Notifications` table on first launch
+- Enable WAL (Write-Ahead Logging) mode for concurrent read performance
+- Provide SQLite connections via `CreateConnection()`
+- Build the connection string securely via `SqliteConnectionStringBuilder`
 
-**Schéma de la table `Notifications` :**
+**`Notifications` table schema:**
 
-| Colonne | Type | Description |
+| Column | Type | Description |
 |---------|------|-------------|
-| `Id` | TEXT (PK) | GUID unique |
-| `Title` | TEXT NOT NULL | Titre de la notification |
-| `Message` | TEXT NOT NULL | Corps du message |
+| `Id` | TEXT (PK) | Unique GUID |
+| `Title` | TEXT NOT NULL | Notification title |
+| `Message` | TEXT NOT NULL | Message body |
 | `Type` | TEXT NOT NULL | `Info`, `Warning`, `Alert` |
-| `TargetUserId` | TEXT NOT NULL | GUID utilisateur ou `"All"` |
+| `TargetUserId` | TEXT NOT NULL | User GUID or `"All"` |
 | `DateCreated` | TEXT NOT NULL | ISO 8601 UTC |
-| `IsSent` | INTEGER | 0 ou 1 (push WebSocket effectué) |
-| `ReadByUsers` | TEXT | JSON array des GUIDs ayant lu |
+| `IsSent` | INTEGER | 0 or 1 (WebSocket push done) |
+| `ReadByUsers` | TEXT | JSON array of GUIDs who have read |
 
 ### `NotificationRepository.cs`
 
-Couche d'accès aux données (DAO pattern).
+Data access layer (DAO pattern).
 
-**Méthodes :**
+**Methods:**
 
-| Méthode | Description |
+| Method | Description |
 |---------|-------------|
-| `InsertAsync()` | INSERT avec tous les champs paramétrés |
-| `GetForUserAsync()` | SELECT pour un userId ou `"All"`, triées par date DESC |
-| `MarkAsReadAsync()` | Ajoute le userId au JSON `ReadByUsers` |
+| `InsertAsync()` | INSERT with all parameterized fields |
+| `GetForUserAsync()` | SELECT for a userId or `"All"`, sorted by date DESC |
+| `MarkAsReadAsync()` | Adds the userId to the `ReadByUsers` JSON |
 | `MarkAsSentAsync()` | SET `IsSent = 1` |
-| `GetAllAsync()` | SELECT * pour l'historique admin |
-| `PurgeOldAsync()` | DELETE les notifications plus vieilles que N jours |
+| `GetAllAsync()` | SELECT * for admin history |
+| `PurgeOldAsync()` | DELETE notifications older than N days |
 
-**Sécurité :**
-- 100% des requêtes SQL utilisent des paramètres (`$param`) — aucune concaténation
-- Toutes les méthodes sont `async` avec `CancellationToken`
-- Chaque méthode ouvre et ferme sa propre connexion (pas de connexion partagée)
+**Security:**
+- 100% of SQL queries use parameters (`$param`) — no concatenation
+- All methods are `async` with `CancellationToken`
+- Each method opens and closes its own connection (no shared connection)
 
 ---
 
 ## Configuration
 
-Le fichier de base est créé dans :
+The database file is created in:
 ```
 {PluginsConfigDir}/JellyfinNotification.db
 ```
 
-Le chemin est résolu par `Plugin.cs` via `IApplicationPaths.PluginConfigurationsPath`.
+The path is resolved by `Plugin.cs` via `IApplicationPaths.PluginConfigurationsPath`.

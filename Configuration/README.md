@@ -1,25 +1,25 @@
-﻿# Configuration
+# Configuration
 
-Ce dossier contient les options de configuration du plugin.
+This folder contains the plugin's configuration options.
 
 ---
 
-## Fichier
+## File
 
 ### `PluginConfiguration.cs`
 
-Configuration persistée automatiquement par Jellyfin dans le fichier XML du plugin.
+Configuration automatically persisted by Jellyfin in the plugin's XML file.
 
-| Option | Type | Défaut | Description |
+| Option | Type | Default | Description |
 |--------|------|--------|-------------|
-| `MaxNotifications` | `int` | `200` | Nombre maximum de notifications conservées en base |
-| `RetentionDays` | `int` | `30` | Suppression automatique des notifications plus vieilles que N jours (0 = désactivé) |
+| `MaxNotifications` | `int` | `200` | Maximum number of notifications kept in database |
+| `RetentionDays` | `int` | `30` | Automatic deletion of notifications older than N days (0 = disabled) |
 
 ---
 
 ## Usage
 
-La configuration est accessible dans le code via :
+The configuration is accessible in the code via:
 
 ```csharp
 var config = Plugin.Instance!.Configuration;
@@ -27,16 +27,16 @@ var max = config.MaxNotifications;
 var days = config.RetentionDays;
 ```
 
-Les valeurs sont éditables depuis le dashboard Jellyfin :
+Values are editable from the Jellyfin dashboard:
 **Dashboard → Plugins → Jellyfin Notification → Configuration**
 
 ---
 
-## Mécanisme Jellyfin
+## Jellyfin Mechanism
 
-Jellyfin sérialise automatiquement la configuration en XML dans :
+Jellyfin automatically serializes the configuration to XML in:
 ```
 {PluginConfigurationsPath}/Jellyfin_notification.xml
 ```
 
-La classe hérite de `BasePluginConfiguration` et n'a pas besoin de logique custom — Jellyfin gère la lecture/écriture et l'UI de configuration automatiquement.
+The class inherits from `BasePluginConfiguration` and does not need custom logic — Jellyfin automatically handles read/write and the configuration UI.

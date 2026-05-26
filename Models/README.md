@@ -1,66 +1,66 @@
 # Models
 
-Ce dossier contient les définitions de données du plugin — entités, DTOs et requêtes.
+This folder contains the plugin's data definitions — entities, DTOs, and requests.
 
 ---
 
-## Fichier
+## File
 
 ### `NotificationModels.cs`
 
-Fichier unique regroupant toutes les classes de données :
+Single file grouping all data classes:
 
-### Entités
+### Entities
 
 #### `NotificationEntity`
-Représentation complète d'une notification en base de données.
+Complete representation of a notification in the database.
 
-| Propriété | Type | Description |
+| Property | Type | Description |
 |-----------|------|-------------|
-| `Id` | `string` | GUID unique |
-| `Title` | `string` | Titre (max 120 chars) |
-| `Message` | `string` | Corps du message (max 2000 chars) |
-| `Type` | `string` | `Info`, `Warning`, ou `Alert` |
-| `TargetUserId` | `string` | GUID utilisateur ou `"All"` |
+| `Id` | `string` | Unique GUID |
+| `Title` | `string` | Title (max 120 chars) |
+| `Message` | `string` | Message body (max 2000 chars) |
+| `Type` | `string` | `Info`, `Warning`, or `Alert` |
+| `TargetUserId` | `string` | User GUID or `"All"` |
 | `DateCreated` | `string` | ISO 8601 UTC |
-| `IsSent` | `bool` | Push WebSocket effectué |
-| `ReadByUsers` | `List<string>` | GUIDs des utilisateurs ayant lu |
+| `IsSent` | `bool` | WebSocket push done |
+| `ReadByUsers` | `List<string>` | GUIDs of users who have read |
 
 ### DTOs (Data Transfer Objects)
 
 #### `NotificationDto`
-Vue côté client d'une notification. Exposé par `GET /Notification/List`.
+Client-side view of a notification. Exposed by `GET /Notification/List`.
 
-| Propriété | Type | Description |
+| Property | Type | Description |
 |-----------|------|-------------|
 | `Id` | `string` | GUID |
-| `Title` | `string` | Titre |
-| `Message` | `string` | Corps |
+| `Title` | `string` | Title |
+| `Message` | `string` | Body |
 | `Type` | `string` | Type |
-| `Date` | `string` | Date formatée locale |
-| `IsRead` | `bool` | Déjà lu par l'utilisateur courant |
+| `Date` | `string` | Local formatted date |
+| `IsRead` | `bool` | Already read by the current user |
 
 #### `NotificationAdminDto`
-Vue enrichie pour l'historique admin. Exposé par `GET /Notification/Admin/History`.
+Enriched view for admin history. Exposed by `GET /Notification/Admin/History`.
 
-Inclut en plus : `TargetUserId`, `IsSent`, `ReadCount`.
+Also includes: `TargetUserId`, `IsSent`, `ReadCount`.
 
-### Requêtes
+### Requests
 
 #### `SendNotificationRequest`
-Body du `POST /Notification/Send`.
+Body of `POST /Notification/Send`.
 
-| Propriété | JSON | Description |
+| Property | JSON | Description |
 |-----------|------|-------------|
-| `Title` | `title` | Titre de la notification |
-| `Message` | `message` | Corps du message |
-| `TargetUserId` | `targetUserId` | `"All"` ou GUID |
-| `Type` | `type` | `Info`, `Warning`, ou `Alert` |
+| `Title` | `title` | Notification title |
+| `Message` | `message` | Message body |
+| `TargetUserId` | `targetUserId` | `"All"` or GUID |
+| `Type` | `type` | `Info`, `Warning`, or `Alert` |
 
 ---
 
 ## Conventions
 
-- Tous les DTOs utilisent `[JsonPropertyName]` explicites pour un binding JSON déterministe
-- Les entités sont des POCO simples (pas d'Entity Framework)
-- La conversion Entity → DTO se fait dans le Controller
+- All DTOs use explicit `[JsonPropertyName]` for deterministic JSON binding
+- Entities are simple POCOs (no Entity Framework)
+- Entity → DTO conversion is done in the Controller

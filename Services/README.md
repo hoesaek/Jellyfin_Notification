@@ -1,48 +1,48 @@
-﻿# Services
+# Services
 
-Ce dossier contient la couche métier du plugin — le moteur de notification.
+This folder contains the business layer of the plugin — the notification engine.
 
 ---
 
-## Fichiers
+## Files
 
 ### `NotificationService.cs`
 
-Service singleton enregistré via `PluginServiceRegistrar`. Implémente le **pattern Outbox** :
+Singleton service registered via `PluginServiceRegistrar`. Implements the **Outbox pattern**:
 
 ```
 SendAsync()
-  ├── (1) INSERT en base (persist)        → NotificationRepository
-  ├── (2) Push WebSocket (toast natif)    → ISessionManager
+  ├── (1) INSERT in database (persist)    → NotificationRepository
+  ├── (2) Push WebSocket (native toast)   → ISessionManager
   └── (3) UPDATE IsSent = true            → NotificationRepository
 ```
 
-**Responsabilités :**
-- Orchestrer le flux persist → push → mark sent
-- Résoudre `ISessionManager` de manière paresseuse (indisponible au `RegisterServices()`)
-- Cibler les sessions actives de l'utilisateur ou diffuser à tous (`"All"`)
-- Déléguer tout accès SQLite au `NotificationRepository`
+**Responsibilities:**
+- Orchestrate the persist → push → mark sent flow
+- Resolve `ISessionManager` lazily (unavailable at `RegisterServices()`)
+- Target active sessions of the user or broadcast to all (`"All"`)
+- Delegate all SQLite access to the `NotificationRepository`
 
-**Points techniques :**
+**Technical points:**
 
-| Concept | Implémentation |
+| Concept | Implementation |
 |---------|---------------|
-| Lazy init thread-safe | `volatile` + `Interlocked.CompareExchange` sur `_sessionManager` |
-| Push WebSocket | `ISessionManager.SendMessageCommand()` par session |
-| Ciblage | `"All"` → toutes les sessions actives / GUID → sessions de cet utilisateur |
-| Logging | `ILogger<NotificationService>` avec préfixe `[JellyNotif]` |
+| Lazy init thread-safe | `volatile` + `Interlocked.CompareExchange` on `_sessionManager` |
+| WebSocket Push | `ISessionManager.SendMessageCommand()` per session |
+| Targeting | `"All"` → all active sessions / GUID → sessions of this user |
+| Logging | `ILogger<NotificationService>` with `[JellyNotif]` prefix |
 
-**Ne doit PAS contenir :**
-- Du SQL direct (→ Repository)
-- De la validation HTTP (→ Controller)
-- De la logique d'affichage (→ Client JS)
+**Must NOT contain:**
+- Direct SQL (→ Repository)
+- HTTP validation (→ Controller)
+- Display logic (→ Client JS)
 
 ---
 
-## Injection de dépendances
+## Dependency Injection
 
 ```csharp
 services.AddSingleton<NotificationService>();
 ```
 
-Le service est résolu une seule fois au démarrage. `ISessionManager` est résolu au premier accès (lazy) car le serveur Jellyfin ne l'a pas encore enregistré au moment du `RegisterServices()`.
+The service is resolved only once at startup. `ISessionManager` is resolved on first access (lazy) because the Jellyfin server has not registered it yet at `RegisterServices()` time.

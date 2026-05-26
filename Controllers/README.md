@@ -1,45 +1,45 @@
-﻿# Controllers
+# Controllers
 
-Ce dossier contient les contrôleurs API REST du plugin, exposés automatiquement par le système de routing ASP.NET Core de Jellyfin.
+This folder contains the plugin's REST API controllers, automatically exposed by Jellyfin's ASP.NET Core routing system.
 
 ---
 
-## Fichiers
+## Files
 
 ### `NotificationController.cs`
 
-Point d'entrée HTTP principal du plugin. Expose les endpoints suivants :
+Main HTTP entry point for the plugin. Exposes the following endpoints:
 
-| Endpoint | Méthode | Auth | Description |
+| Endpoint | Method | Auth | Description |
 |----------|---------|------|-------------|
-| `/Notification/Send` | POST | Admin | Crée et pousse une notification |
-| `/Notification/List` | GET | User | Retourne les notifications de l'utilisateur courant |
-| `/Notification/MarkAsRead/{id}` | POST | User | Marque une notification comme lue |
-| `/Notification/Admin/History` | GET | Admin | Historique complet pour le dashboard |
+| `/Notification/Send` | POST | Admin | Creates and pushes a notification |
+| `/Notification/List` | GET | User | Returns the current user's notifications |
+| `/Notification/MarkAsRead/{id}` | POST | User | Marks a notification as read |
+| `/Notification/Admin/History` | GET | Admin | Full history for the dashboard |
 
-**Points techniques :**
-- L'authentification s'appuie sur les claims Jellyfin (`Jellyfin-UserId` en priorité, avec fallback `NameIdentifier` / `sub`)
-- La validation des inputs est stricte : titre ≤ 120 chars, message ≤ 2000 chars, TargetUserId = `All` ou GUID valide
-- Le controller ne contient **aucune logique métier** — tout est délégué à `NotificationService`
+**Technical points:**
+- Authentication relies on Jellyfin claims (`Jellyfin-UserId` in priority, with fallback `NameIdentifier` / `sub`)
+- Input validation is strict: title ≤ 120 chars, message ≤ 2000 chars, TargetUserId = `All` or valid GUID
+- The controller contains **no business logic** — everything is delegated to `NotificationService`
 
 ### `ClientScriptController.cs`
 
-Sert le fichier JavaScript client (`notif-client.js`) depuis les ressources embarquées de la DLL.
+Serves the client JavaScript file (`notif-client.js`) from the DLL's embedded resources.
 
-| Endpoint | Méthode | Auth | Description |
+| Endpoint | Method | Auth | Description |
 |----------|---------|------|-------------|
-| `/JellyNotif/client` | GET | Public | Script JS client (cache 1h) |
+| `/JellyNotif/client` | GET | Public | Client JS script (1h cache) |
 
-**Points techniques :**
-- Le script est mis en cache dans un `Lazy<byte[]>` statique (une seule lecture via reflection au premier appel)
-- `ResponseCache(Duration = 3600)` côté HTTP pour éviter les requêtes répétées
-- `AllowAnonymous` car le script est chargé avant toute authentification utilisateur
+**Technical points:**
+- The script is cached in a static `Lazy<byte[]>` (only one read via reflection on first call)
+- `ResponseCache(Duration = 3600)` on the HTTP side to prevent repeated requests
+- `AllowAnonymous` because the script is loaded before any user authentication
 
 ---
 
 ## Conventions
 
-- Héritent de `ControllerBase` (pas `Controller` — pas de Views MVC)
-- Route de base : `[Route("")]` → routes définies par attribut sur chaque méthode
-- `[Authorize(Policy = "RequiresElevation")]` = admin uniquement
-- `ConfigureAwait(false)` sur tous les `await`
+- Inherit from `ControllerBase` (not `Controller` — no MVC Views)
+- Base route: `[Route("")]` → routes defined by attribute on each method
+- `[Authorize(Policy = "RequiresElevation")]` = admin only
+- `ConfigureAwait(false)` on all `await`

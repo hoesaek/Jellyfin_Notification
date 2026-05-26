@@ -1,49 +1,49 @@
 # CLAUDE.md — Jellyfin Notification Plugin
 
-Guide de référence pour les interventions IA sur ce repository.
+Reference guide for AI interventions on this repository.
 
 ---
 
-## Commandes de build et déploiement
+## Build and deployment commands
 
 ```bash
-# Build standard (Release, net9.0)
+# Standard build (Release, net9.0)
 dotnet build -c Release
 
-# Déploiement complet (build + stop Jellyfin + copie DLL + injection index.html)
-# Exécuter en administrateur (PowerShell)
+# Full deployment (build + stop Jellyfin + copy DLL + inject index.html)
+# Run as administrator (PowerShell)
 .\deploy.ps1 -Version "X.X.X.X"
 
-# Build uniquement, sans déploiement
+# Build only, without deployment
 dotnet build -c Release --no-restore
 ```
 
-> Le `deploy.ps1` exécute dans l'ordre :
+> The `deploy.ps1` executes in order:
 > 1. `dotnet build -c Release`
-> 2. Arrêt du service Jellyfin
-> 3. Suppression des anciennes versions dans `C:\ProgramData\Jellyfin\Server\plugins\`
-> 4. Copie de la DLL + meta.json vers `Jellyfin_notification_{version}`
-> 5. Injection du `<script>` dans `index.html` du web client
+> 2. Stop Jellyfin service
+> 3. Delete old versions in `C:\ProgramData\Jellyfin\Server\plugins\`
+> 4. Copy DLL + meta.json to `Jellyfin_notification_{version}`
+> 5. Inject `<script>` into `index.html` of the web client
 
 ---
 
-## Architecture du projet
+## Project architecture
 
 ```
 Jellyfin_notification/
-├── Plugin.cs                          # Point d'entrée — injection script, IHasWebPages
-├── PluginServiceRegistrar.cs          # Enregistrement DI (Singleton pour tous les services)
+├── Plugin.cs                          # Entry point — script injection, IHasWebPages
+├── PluginServiceRegistrar.cs          # DI registration (Singleton for all services)
 │
 ├── Controllers/
-│   ├── NotificationController.cs      # API REST : Send, List, MarkAsRead, Admin/History
-│   └── ClientScriptController.cs      # Sert le JS embarqué (/JellyNotif/client)
+│   ├── NotificationController.cs      # REST API: Send, List, MarkAsRead, Admin/History
+│   └── ClientScriptController.cs      # Serves embedded JS (/JellyNotif/client)
 │
 ├── Services/
-│   └── NotificationService.cs         # Logique métier — Pattern Outbox (persist → push → mark)
+│   └── NotificationService.cs         # Business logic — Outbox pattern (persist → push → mark)
 │
 ├── Data/
-│   ├── NotificationDbContext.cs        # Init schéma SQLite + factory de connexions
-│   └── NotificationRepository.cs      # CRUD SQLite async (INSERT, SELECT, UPDATE, DELETE)
+│   ├── NotificationDbContext.cs        # SQLite schema init + connection factory
+│   └── NotificationRepository.cs      # Async SQLite CRUD (INSERT, SELECT, UPDATE, DELETE)
 │
 ├── Models/
 │   └── NotificationModels.cs          # NotificationEntity, DTOs (NotificationDto, AdminNotificationDto),
@@ -53,18 +53,18 @@ Jellyfin_notification/
 │   └── PluginConfiguration.cs         # MaxNotifications, RetentionDays
 │
 ├── ClientScript/
-│   └── notif-client.js                # SPA client — cloche, panneau, modale, polling
+│   └── notif-client.js                # Client SPA — bell, panel, modal, polling
 │
 ├── Pages/
-│   ├── send.html                      # Page admin : formulaire d'envoi
-│   └── history.html                   # Page admin : historique
+│   ├── send.html                      # Admin page: send form
+│   └── history.html                   # Admin page: history
 │
-├── deploy.ps1                         # Script de déploiement automatisé
-├── meta.json                          # Métadonnées NuGet/Jellyfin du plugin
-└── Jellyfin_notification.csproj         # Projet .NET 9 — bibliothèque de classes
+├── deploy.ps1                         # Automated deployment script
+├── meta.json                          # Plugin NuGet/Jellyfin metadata
+└── Jellyfin_notification.csproj         # .NET 9 Project — class library
 ```
 
-### Flux de données
+### Data flow
 
 ```
 Admin (send.html)
@@ -81,128 +81,127 @@ POST /Notification/Send  ──→  NotificationController
     │             via Repository      via ISessionManager
     │                    │                   │
     │                    ▼                   ▼
-    │            (D) UPDATE IsSent    Toast natif Jellyfin
+    │            (D) UPDATE IsSent    Native Jellyfin toast
     │                                        │
     ▼                                        ▼
-Client (notif-client.js)              Affiché immédiatement
+Client (notif-client.js)              Displayed immediately
     │
     ▼
-GET /Notification/List  ←── Polling 60s (fallback Outbox)
+GET /Notification/List  ←── Polling 60s (Outbox fallback)
     │
     ▼
-Panneau cloche
+Bell panel
 ```
 
 ---
 
-## Responsabilités des fichiers clés
+## Key files responsibilities
 
-| Fichier | Responsabilité | Ne doit PAS contenir |
+| File | Responsibility | Must NOT contain |
 |---------|---------------|---------------------|
-| `Plugin.cs` | Bootstrap, injection `<script>`, pages admin | Logique métier, accès DB |
-| `NotificationController.cs` | Validation HTTP, routing, extraction claims | Logique métier, SQL |
-| `NotificationService.cs` | Outbox (persist → push → mark), purge | SQL direct, accès HTTP |
-| `NotificationRepository.cs` | CRUD SQLite pur, requêtes paramétrées | Logique métier, WebSocket |
-| `NotificationDbContext.cs` | Schéma, connexion factory | Requêtes, logique |
-| `notif-client.js` | UI cloche/panneau/modale, polling API | Logique serveur, SQL |
-| `send.html` | Formulaire admin, appels fetch | Accès DB, modifications DOM globales |
+| `Plugin.cs` | Bootstrap, `<script>` injection, admin pages | Business logic, DB access |
+| `NotificationController.cs` | HTTP validation, routing, claims extraction | Business logic, SQL |
+| `NotificationService.cs` | Outbox (persist → push → mark), purge | Direct SQL, HTTP access |
+| `NotificationRepository.cs` | Pure SQLite CRUD, parameterized queries | Business logic, WebSocket |
+| `NotificationDbContext.cs` | Schema, connection factory | Queries, logic |
+| `notif-client.js` | UI bell/panel/modal, API polling | Server logic, SQL |
+| `send.html` | Admin form, fetch calls | DB access, global DOM modifications |
 
 ---
 
-## Conventions de code
+## Code conventions
 
 ### C# — Backend
 
-- **Namespace** : `Jellyfin_notification.{Folder}` (ex: `Jellyfin_notification.Services`)
-- **Logging** : Toujours préfixer par `[JellyNotif]` — ex: `_logger.LogInformation("[JellyNotif] ...")`
-- **Async** : Toutes les méthodes I/O doivent être `async Task<T>` avec `CancellationToken ct` en dernier paramètre
-- **ConfigureAwait** : Toujours `.ConfigureAwait(false)` sur les `await` (pas de contexte de synchronisation)
-- **SQL** : Requêtes paramétrées uniquement (`$param`). JAMAIS de concaténation de strings dans les requêtes
-- **DI** : Les services sont Singleton. Si une dépendance Jellyfin n'est pas disponible au démarrage, utiliser la résolution paresseuse via `IServiceProvider`
-- **DTOs** : Toujours décorer avec `[JsonPropertyName("camelCase")]` pour un contrat API explicite
-- **XML Docs** : Obligatoire sur les méthodes et classes publiques
-- **Nullability** : `<Nullable>enable</Nullable>` — utiliser `?` explicitement, vérifier les null
-- **Versioning** : Synchroniser `Version` dans `.csproj` ET `meta.json`
+- **Namespace**: `Jellyfin_notification.{Folder}` (e.g.: `Jellyfin_notification.Services`)
+- **Logging**: Always prefix with `[JellyNotif]` — e.g.: `_logger.LogInformation("[JellyNotif] ...")`
+- **Async**: All I/O methods must be `async Task<T>` with `CancellationToken ct` as last parameter
+- **ConfigureAwait**: Always `.ConfigureAwait(false)` on `await` (no synchronization context)
+- **SQL**: Parameterized queries only (`$param`). NEVER string concatenation in queries
+- **DI**: Services are Singleton. If a Jellyfin dependency is unavailable at startup, use lazy resolution via `IServiceProvider`
+- **DTOs**: Always decorate with `[JsonPropertyName("camelCase")]` for an explicit API contract
+- **XML Docs**: Mandatory on public methods and classes
+- **Nullability**: `<Nullable>enable</Nullable>` — explicitly use `?`, check for nulls
+- **Versioning**: Synchronize `Version` in `.csproj` AND `meta.json`
 
 ### JavaScript — Frontend
 
-- **IIFE** : Tout le code dans `(function () { 'use strict'; ... })();`
-- **Préfixe console** : `[JellyNotif]` sur tous les `console.log/warn/error`
-- **Échappement XSS** : Utiliser `escHtml()` pour TOUTE donnée serveur insérée dans le DOM via `innerHTML`
-- **textContent** : Préférer `textContent` à `innerHTML` quand aucun markup n'est nécessaire
-- **ApiClient** : Utiliser `window.ApiClient.ajax()` avec des chemins relatifs (jamais d'URL absolues — le token est injecté automatiquement)
-- **Authentification** : Toujours vérifier `getCurrentUserId()` avant d'appeler les endpoints
-- **Polling** : `POLL_INTERVAL = 60_000` (60s). Ne pas descendre en dessous
+- **IIFE**: All code inside `(function () { 'use strict'; ... })();`
+- **Console prefix**: `[JellyNotif]` on all `console.log/warn/error`
+- **XSS Escaping**: Use `escHtml()` for ANY server data inserted into DOM via `innerHTML`
+- **textContent**: Prefer `textContent` over `innerHTML` when no markup is needed
+- **ApiClient**: Use `window.ApiClient.ajax()` with relative paths (never absolute URLs — token is injected automatically)
+- **Authentication**: Always verify `getCurrentUserId()` before calling endpoints
+- **Polling**: `POLL_INTERVAL = 60_000` (60s). Do not go below
 
 ---
 
-## Règles de sécurité
+## Security rules
 
-### Authentification Jellyfin
+### Jellyfin Authentication
 
-- **Claim utilisateur** : Jellyfin 10.11.x utilise `"Jellyfin-UserId"` (claim personnalisé). Toujours chercher dans cet ordre :
+- **User Claim**: Jellyfin 10.11.x uses `"Jellyfin-UserId"` (custom claim). Always search in this order:
   1. `User.FindFirst("Jellyfin-UserId")`
   2. `User.FindFirst(ClaimTypes.NameIdentifier)`
   3. `User.FindFirst("sub")`
-- **Admin** : Les endpoints admin utilisent `[Authorize(Policy = "RequiresElevation")]` (natif Jellyfin)
-- **User** : Les endpoints utilisateur utilisent `[Authorize]` + extraction du claim UserId
-- **Script client** : `[AllowAnonymous]` car le `<script>` est chargé avant l'auth. Le script ne contient aucune donnée sensible
+- **Admin**: Admin endpoints use `[Authorize(Policy = "RequiresElevation")]` (Jellyfin native)
+- **User**: User endpoints use `[Authorize]` + extraction of UserId claim
+- **Client script**: `[AllowAnonymous]` because `<script>` is loaded before auth. The script contains no sensitive data
 
-### Validation des données
+### Data validation
 
-- **Titre** : max 120 caractères, obligatoire, trimmed
-- **Message** : max 2000 caractères, obligatoire, trimmed
-- **TargetUserId** : doit être `"All"` ou un GUID valide (Guid.TryParse)
-- **Type** : whitelist stricte `{ "Info", "Warning", "Alert" }` — tout autre valeur → fallback `"Info"`
-- **notifId** : contraint par le route template `{notifId:guid}` — invalide = 404 automatique
+- **Title**: max 120 characters, required, trimmed
+- **Message**: max 2000 characters, required, trimmed
+- **TargetUserId**: must be `"All"` or a valid GUID (Guid.TryParse)
+- **Type**: strict whitelist `{ "Info", "Warning", "Alert" }` — any other value → `"Info"` fallback
+- **notifId**: constrained by route template `{notifId:guid}` — invalid = automatic 404
 
-### Prévention XSS
+### XSS Prevention
 
-- **Backend** : Les réponses JSON sont échappées nativement par `System.Text.Json`
-- **Frontend (notif-client.js)** : `escHtml()` échappe `& < > " '` avant tout `innerHTML`
-- **Frontend (send.html)** : `showFeedback()` utilise `textContent` (pas d'innerHTML avec des données user)
-- **Erreurs serveur** : Tronquées à 200 caractères avant affichage côté client
+- **Backend**: JSON responses are natively escaped by `System.Text.Json`
+- **Frontend (notif-client.js)**: `escHtml()` escapes `& < > " '` before any `innerHTML`
+- **Frontend (send.html)**: `showFeedback()` uses `textContent` (no innerHTML with user data)
+- **Server errors**: Truncated to 200 characters before client display
 
 ### SQLite
 
-- **Paramètres** : Toujours `$param` dans les requêtes, jamais de concaténation
-- **Connection string** : Construite via `SqliteConnectionStringBuilder` (pas d'interpolation — prévention injection)
-- **WAL mode** : Activé au démarrage pour la concurrence lecture/écriture
-- **Connexion par opération** : Chaque méthode du repository ouvre et dispose sa propre connexion
+- **Parameters**: Always `$param` in queries, never concatenation
+- **Connection string**: Built via `SqliteConnectionStringBuilder` (no interpolation — injection prevention)
+- **WAL mode**: Enabled at startup for read/write concurrency
+- **Per-operation connection**: Each repository method opens and disposes its own connection
 
-### Résolution DI paresseuse
+### Lazy DI Resolution
 
-`ISessionManager` n'est pas disponible dans le conteneur DI au moment de `RegisterServices()` (les services Jellyfin sont enregistrés après les plugins). Solution :
-- Injecter `IServiceProvider` au lieu de `ISessionManager`
-- Résoudre via une propriété thread-safe avec `Interlocked.CompareExchange`
-- La résolution est amortie (une seule fois, puis cached)
+`ISessionManager` is not available in DI container at `RegisterServices()` time (Jellyfin services are registered after plugins). Solution:
+- Inject `IServiceProvider` instead of `ISessionManager`
+- Resolve via a thread-safe property with `Interlocked.CompareExchange`
+- Resolution is amortized (only once, then cached)
 
 ---
 
-## Fichiers à ne PAS modifier
+## Files NOT to modify
 
-| Fichier | Raison |
+| File | Reason |
 |---------|--------|
-| `build.yaml` | CI/CD template, non utilisé actuellement |
-| `index.html` (Jellyfin) | Modifié dynamiquement par `Plugin.cs` au démarrage |
+| `index.html` (Jellyfin) | Dynamically modified by `Plugin.cs` at startup |
 
 ---
 
-## Erreurs courantes et solutions
+## Common errors and solutions
 
-| Symptôme | Cause | Solution |
+| Symptom | Cause | Solution |
 |----------|-------|----------|
-| 500 `Unable to resolve ISessionManager` | DI ordre de registration | Résolution paresseuse via IServiceProvider |
-| 401 sur `GET /Notification/List` | Mauvais claim UserId | Chercher `"Jellyfin-UserId"` en priorité |
-| `SessionMessageType.Message` compile error | Enum inexistant en 10.11.8 | Utiliser `SendMessageCommand` par session |
-| Script client non chargé | `<script>` non injecté | Vérifier `deploy.ps1` étape 5, ou `Plugin.cs` |
-| Premier poll en 401 | `tryInit()` sans vérifier l'auth | Exiger `getCurrentUserId()` non-null |
+| 500 `Unable to resolve ISessionManager` | DI registration order | Lazy resolution via IServiceProvider |
+| 401 on `GET /Notification/List` | Wrong UserId claim | Search `"Jellyfin-UserId"` first |
+| `SessionMessageType.Message` compile error | Enum non-existent in 10.11.8 | Use `SendMessageCommand` per session |
+| Client script not loaded | `<script>` not injected | Check `deploy.ps1` step 5, or `Plugin.cs` |
+| First poll is 401 | `tryInit()` without checking auth | Require non-null `getCurrentUserId()` |
 
 ---
 
-## Compatibilité
+## Compatibility
 
-- **Jellyfin** : 10.11.x (targetAbi: `10.11.0.0`)
-- **.NET** : 9.0
-- **SQLite** : Fourni par le runtime Jellyfin (pas de DLL native à embarquer)
-- **Navigateurs** : Tous les navigateurs supportés par le web client Jellyfin
+- **Jellyfin**: 10.11.x (targetAbi: `10.11.0.0`)
+- **.NET**: 9.0
+- **SQLite**: Provided by Jellyfin runtime (no native DLL to embed)
+- **Browsers**: All browsers supported by Jellyfin web client
