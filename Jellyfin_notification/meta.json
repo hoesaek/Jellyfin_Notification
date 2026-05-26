@@ -1,0 +1,14 @@
+﻿{
+  "category": "Notifications",
+  "changelog": "v2.3.0 — Redesign premium UI, suppression client, documentation GitHub, modularisation code",
+  "description": "Système de notifications personnalisées pour Jellyfin. Envoi ciblé, push temps réel, cloche native, historique admin.",
+  "guid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "imageUrl": "",
+  "name": "Jellyfin Notification",
+  "overview": "Envoie des notifications ciblées aux utilisateurs Jellyfin depuis le tableau de bord admin.",
+  "owner": "Jellyfin",
+  "targetAbi": "10.11.0.0",
+  "timestamp": "2026-05-26T10:20:00Z",
+  "version": "2.3.0.0",
+  "assemblies": ["Jellyfin_notification.dll"]
+}

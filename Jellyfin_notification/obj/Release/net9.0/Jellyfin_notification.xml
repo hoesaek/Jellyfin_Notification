@@ -1,0 +1,255 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Jellyfin_notification</name>
+    </assembly>
+    <members>
+        <member name="T:Jellyfin_notification.Configuration.PluginConfiguration">
+            <summary>
+            Configuration du plugin (visible depuis le dashboard Jellyfin si besoin).
+            Pour l'instant minimal — peut être étendu pour ajouter des options (max notifs, rétention, etc.).
+            </summary>
+        </member>
+        <member name="P:Jellyfin_notification.Configuration.PluginConfiguration.MaxNotifications">
+            <summary>
+            Nombre maximum de notifications conservées en base.
+            Au-delà, les plus anciennes sont supprimées automatiquement.
+            </summary>
+        </member>
+        <member name="P:Jellyfin_notification.Configuration.PluginConfiguration.RetentionDays">
+            <summary>
+            Nombre de jours après lequel une notification est auto-supprimée (0 = désactivé).
+            </summary>
+        </member>
+        <member name="T:Jellyfin_notification.Controllers.ClientScriptController">
+             <summary>
+             Sert le script JavaScript client embarqué dans la DLL.
+            
+             Séparé de NotificationController pour éviter le conflit de Content-Type :
+               NotificationController → [Produces("application/json")]
+               ClientScriptController → Produces "application/javascript"
+            
+             Le script est chargé via le &lt;script&gt; injecté dans index.html par Plugin.cs.
+             Route : GET /JellyNotif/client?v={version}
+               → v= est utilisé comme cache-buster côté navigateur
+               → le serveur répond avec Cache-Control: max-age=3600
+             </summary>
+        </member>
+        <member name="F:Jellyfin_notification.Controllers.ClientScriptController.CachedScript">
+            <summary>
+            Retourne le script JavaScript client embarqué.
+            AllowAnonymous : ce script est chargé avant toute authentification.
+            </summary>
+        </member>
+        <member name="T:Jellyfin_notification.Controllers.NotificationController">
+             <summary>
+             API REST du plugin Jellyfin Notification.
+            
+               POST /Notification/Send            → Admin  — Créer + push une notification
+               GET  /Notification/Admin/History   → Admin  — Historique complet
+               GET  /Notification/List            → User   — Notifs de l'utilisateur courant
+               POST /Notification/MarkAsRead/{id} → User   — Marquer comme lue
+            
+             Ce contrôleur est un thin adapter : aucune logique métier ici,
+             tout est délégué à <see cref="T:Jellyfin_notification.Services.NotificationService"/>.
+             </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Controllers.NotificationController.#ctor(Jellyfin_notification.Services.NotificationService)">
+            <summary>Injection du service via DI.</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Controllers.NotificationController.Send(Jellyfin_notification.Models.SendNotificationRequest,System.Threading.CancellationToken)">
+            <summary>Crée et pousse immédiatement une notification (Outbox).</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Controllers.NotificationController.GetAdminHistory(System.Threading.CancellationToken)">
+            <summary>Retourne l'historique complet pour le tableau de bord admin.</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Controllers.NotificationController.GetList(System.Threading.CancellationToken)">
+            <summary>
+            Retourne les notifications de l'utilisateur courant.
+            C'est le fallback polling du pattern Outbox
+            (pour les clients qui étaient offline lors du push WebSocket).
+            </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Controllers.NotificationController.MarkAsRead(System.Guid,System.Threading.CancellationToken)">
+            <summary>Marque une notification comme lue par l'utilisateur courant.</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Controllers.NotificationController.GetUserId">
+            <summary>
+            Extrait l'ID utilisateur depuis les claims du JWT/session Jellyfin.
+            
+            Jellyfin 10.11.x utilise un claim personnalisé "Jellyfin-UserId"
+            qui n'est ni ClaimTypes.NameIdentifier ni "sub". On le cherche
+            en priorité, avec fallback sur les claims standards pour la
+            compatibilité future.
+            </summary>
+        </member>
+        <member name="T:Jellyfin_notification.Data.NotificationDbContext">
+             <summary>
+             Initialise et fournit les connexions SQLite pour le plugin.
+            
+             Responsabilités :
+               - Créer la base dans PluginConfigurationsPath au premier démarrage.
+               - Appliquer le schéma (CREATE TABLE IF NOT EXISTS).
+               - Fournir une connexion ouvrable à la demande (une par opération — thread-safe).
+            
+             Enregistré en Singleton dans PluginServiceRegistrar.
+             </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationDbContext.#ctor(System.String,Microsoft.Extensions.Logging.ILogger{Jellyfin_notification.Data.NotificationDbContext})">
+            <param name="dbPath">Chemin complet vers le fichier .db (fourni par NotificationRepository via IApplicationPaths).</param>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationDbContext.CreateConnection">
+            <summary>Crée et retourne une connexion SQLite (à ouvrir puis disposer par l'appelant).</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationDbContext.Dispose">
+            <inheritdoc/>
+        </member>
+        <member name="T:Jellyfin_notification.Data.NotificationRepository">
+             <summary>
+             Couche d'accès aux données : toutes les opérations SQLite du plugin.
+             Aucune logique métier ici — uniquement du CRUD async.
+            
+             Chaque méthode ouvre sa propre connexion (WAL = safe en concurrence).
+             Enregistré en Singleton dans PluginServiceRegistrar.
+             </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationRepository.InsertAsync(Jellyfin_notification.Models.NotificationEntity,System.Threading.CancellationToken)">
+            <summary>Insère une nouvelle notification (IsSent = 0).</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationRepository.MarkAsSentAsync(System.Guid,System.Threading.CancellationToken)">
+            <summary>Marque une notification comme envoyée via WebSocket.</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationRepository.MarkAsReadAsync(System.Guid,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Marque une notification comme lue par un utilisateur.
+            Retourne <c>false</c> si la notification est introuvable.
+            INSERT OR IGNORE = idempotent (double-clic sans erreur).
+            </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationRepository.GetForUserAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Retourne les 50 dernières notifications visibles par un utilisateur
+            (globales "All" + personnelles), avec état isRead calculé en SQL.
+            </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationRepository.GetAllAsync(System.Threading.CancellationToken)">
+            <summary>Retourne toutes les notifications pour le tableau de bord admin.</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Data.NotificationRepository.PurgeOldAsync(System.Int32,System.Threading.CancellationToken)">
+            <summary>Supprime les notifications antérieures à <paramref name="retentionDays"/> jours.</summary>
+        </member>
+        <member name="T:Jellyfin_notification.Models.NotificationEntity">
+            <summary>
+            Représente une ligne de la table <c>Notifications</c> en base.
+            </summary>
+        </member>
+        <member name="T:Jellyfin_notification.Models.NotificationDto">
+            <summary>DTO renvoyé par GET /Notification/List (frontend utilisateur).</summary>
+        </member>
+        <member name="T:Jellyfin_notification.Models.AdminNotificationDto">
+            <summary>DTO renvoyé par GET /Notification/Admin/History (dashboard admin).</summary>
+        </member>
+        <member name="T:Jellyfin_notification.Models.SendNotificationRequest">
+            <summary>Body attendu par POST /Notification/Send.</summary>
+        </member>
+        <member name="T:Jellyfin_notification.Plugin">
+             <summary>
+             Classe principale du plugin Jellyfin Notification.
+            
+             Responsabilités :
+               - Au démarrage : injecte un &lt;script&gt; dans index.html
+               - À la désinstallation : retire le &lt;script&gt; proprement
+               - Implémente IHasWebPages pour servir les pages d'admin embarquées
+            
+             Toute la logique métier (notifications, DB) est dans NotificationService.
+             </summary>
+        </member>
+        <member name="P:Jellyfin_notification.Plugin.Instance">
+            <summary>Singleton accessible depuis les services (pour la config).</summary>
+        </member>
+        <member name="P:Jellyfin_notification.Plugin.Name">
+            <inheritdoc/>
+        </member>
+        <member name="P:Jellyfin_notification.Plugin.Id">
+            <inheritdoc/>
+        </member>
+        <member name="P:Jellyfin_notification.Plugin.Description">
+            <inheritdoc/>
+        </member>
+        <member name="P:Jellyfin_notification.Plugin.IndexHtmlPath">
+            <summary>
+            Chemin vers le index.html du web client Jellyfin.
+            Plusieurs fallbacks pour couvrir les installations service vs tray.
+            </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Plugin.#ctor(MediaBrowser.Common.Configuration.IApplicationPaths,MediaBrowser.Model.Serialization.IXmlSerializer,Microsoft.Extensions.Logging.ILogger{Jellyfin_notification.Plugin})">
+            <summary>
+            Constructeur résolu par le DI Jellyfin.
+            ILogger&lt;Plugin&gt; est disponible nativement — plus besoin du wrapper Logger.
+            </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Plugin.OnUninstalling">
+            <inheritdoc/>
+        </member>
+        <member name="M:Jellyfin_notification.Plugin.GetPages">
+            <inheritdoc/>
+        </member>
+        <member name="T:Jellyfin_notification.PluginServiceRegistrar">
+             <summary>
+             Enregistre les services du plugin dans le conteneur DI de Jellyfin.
+            
+             Ordre d'enregistrement :
+               1. NotificationDbContext (Singleton) — init schéma SQLite au démarrage
+               2. NotificationRepository (Singleton) — accès data
+               3. NotificationService (Singleton)    — logique métier + Outbox
+            
+             Note : ILogger&lt;T&gt;, ISessionManager et IApplicationPaths sont déjà
+             disponibles dans le conteneur Jellyfin, on les injecte simplement.
+             </summary>
+        </member>
+        <member name="M:Jellyfin_notification.PluginServiceRegistrar.RegisterServices(Microsoft.Extensions.DependencyInjection.IServiceCollection,MediaBrowser.Controller.IServerApplicationHost)">
+            <inheritdoc/>
+        </member>
+        <member name="T:Jellyfin_notification.Services.NotificationService">
+             <summary>
+             Service central — Pattern Outbox :
+            
+               (A) Admin POST /Send
+               (B) INSERT en SQLite           (IsSent = 0)
+               (C) Push via ISessionManager   (WebSocket natif Jellyfin)
+               (D) UPDATE IsSent = 1          (si push OK)
+            
+             Le GET /Notification/List est le fallback pour les clients offline
+             au moment du push.
+            
+             Enregistré en Singleton dans PluginServiceRegistrar.
+            
+             NOTE : ISessionManager est résolu de manière paresseuse via IServiceProvider
+             car il n'est pas encore enregistré au moment où RegisterServices() s'exécute.
+             </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Services.NotificationService.SendAsync(Jellyfin_notification.Models.SendNotificationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Crée, persiste et envoie immédiatement une notification.
+            Retourne l'entité insérée.
+            </summary>
+        </member>
+        <member name="M:Jellyfin_notification.Services.NotificationService.GetForUserAsync(System.String,System.Threading.CancellationToken)">
+            <summary>Retourne les notifications visibles par un utilisateur (fallback polling).</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Services.NotificationService.GetAllAsync(System.Threading.CancellationToken)">
+            <summary>Retourne toutes les notifications pour le tableau de bord admin.</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Services.NotificationService.MarkAsReadAsync(System.Guid,System.String,System.Threading.CancellationToken)">
+            <summary>Marque une notification comme lue.</summary>
+        </member>
+        <member name="M:Jellyfin_notification.Services.NotificationService.PushToSessionsAsync(Jellyfin_notification.Models.NotificationEntity,System.Threading.CancellationToken)">
+            <summary>
+            Pousse la notification via le mécanisme natif Jellyfin.
+            Utilise <see cref="M:MediaBrowser.Controller.Session.ISessionManager.SendMessageCommand(System.String,System.String,MediaBrowser.Model.Session.MessageCommand,System.Threading.CancellationToken)"/> par session
+            pour afficher un toast natif côté client.
+            Retourne true si au moins une session a été atteinte.
+            </summary>
+        </member>
+    </members>
+</doc>
