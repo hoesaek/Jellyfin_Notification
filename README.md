@@ -56,7 +56,7 @@
 #### Build
 
 ```bash
-git clone https://github.com/your-user/jellyfin-notification.git
+git clone https://github.com/hoesaek/Jellyfin_notification.git
 cd jellyfin-notification
 dotnet build -c Release
 ```
